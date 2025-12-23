@@ -1,266 +1,309 @@
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted, computed } from 'vue'
+import { 
+  Search, Plus, Bird, Calendar, Pencil, Trash, X, Save, 
+  FileText
+} from 'lucide-vue-next'
 
-const router = useRouter()
 const animals = ref([])
-const showForm = ref(false)
-const loading = ref(false)
+const searchQuery = ref('')
+const loading = ref(true)
+
+// State Modal & Form
+const isModalOpen = ref(false)
+const isSubmitting = ref(false)
+const editingId = ref(null) // Melacak ID yang sedang diedit
 
 const userId = localStorage.getItem('user_id')
 
-// --- STATE PENCARIAN & INPUT ---
-const searchQuery = ref('') 
-const sireQuery = ref('')   
-const damQuery = ref('')    
-const showSireList = ref(false) 
-const showDamList = ref(false)  
-
-// FORM DATA
 const form = ref({
-  ring_number: '', species: 'Lovebird', gender: 'U', visual: '',
-  sire_id: null, sire_other: '', 
-  dam_id: null, dam_other: '',  
-  status: 'AVAILABLE'
+  ring_number: '', visual: '', gender: 'U', hatch_date: '',
+  sire_other: '', dam_other: '', status: 'Available', notes: ''
 })
 
-// Reset pencarian saat form dibuka/tutup
-watch(showForm, (val) => {
-  if (!val) { sireQuery.value = ''; damQuery.value = '' }
-})
-
-// --- FILTER LOGIC ---
-const filteredAnimals = computed(() => {
-  const q = searchQuery.value.toLowerCase()
-  return animals.value.filter(a => a.ring_number.toLowerCase().includes(q) || a.visual.toLowerCase().includes(q))
-})
-
-const filteredSires = computed(() => {
-  if (!sireQuery.value) return []
-  const q = sireQuery.value.toLowerCase()
-  return animals.value.filter(a => a.gender === 'M' && (a.ring_number.toLowerCase().includes(q) || a.visual.toLowerCase().includes(q)))
-})
-
-const filteredDams = computed(() => {
-  if (!damQuery.value) return []
-  const q = damQuery.value.toLowerCase()
-  return animals.value.filter(a => a.gender === 'F' && (a.ring_number.toLowerCase().includes(q) || a.visual.toLowerCase().includes(q)))
-})
-
-// --- METHODS ---
-onMounted(() => {
-  if (!userId) { router.push('/login') } else { fetchAnimals() }
-})
-
+// --- 1. FETCH DATA (READ) ---
 const fetchAnimals = async () => {
+  loading.value = true
   try {
     const res = await fetch(`http://localhost:8080/api/animals?user_id=${userId}`)
     const json = await res.json()
     animals.value = json.data || []
-  } catch (err) { console.error(err) }
+  } catch (err) { console.error(err) } finally { loading.value = false }
 }
 
-const onSireInput = () => {
-  showSireList.value = true
-  form.value.sire_other = sireQuery.value
-  form.value.sire_id = null 
-}
-
-const selectSire = (bird) => {
-  form.value.sire_id = bird.id
-  sireQuery.value = `${bird.ring_number} - ${bird.visual}`
-  form.value.sire_other = ''
-  showSireList.value = false
-}
-
-const onDamInput = () => {
-  showDamList.value = true
-  form.value.dam_other = damQuery.value
-  form.value.dam_id = null
-}
-
-const selectDam = (bird) => {
-  form.value.dam_id = bird.id
-  damQuery.value = `${bird.ring_number} - ${bird.visual}`
-  form.value.dam_other = ''
-  showDamList.value = false
-}
-
-const submitAnimal = async () => {
-  loading.value = true
-  if (!form.value.sire_id) form.value.sire_other = sireQuery.value
-  if (!form.value.dam_id) form.value.dam_other = damQuery.value
-
-  const payload = { user_id: parseInt(userId), ...form.value }
-
+// --- 2. SAVE DATA (CREATE / UPDATE) ---
+const saveAnimal = async () => {
+  if (!form.value.visual) return alert("Warna/Visual wajib diisi!")
+  
+  isSubmitting.value = true
   try {
-    const res = await fetch('http://localhost:8080/api/animals', {
-      method: 'POST',
+    const payload = { ...form.value, user_id: parseInt(userId) }
+    
+    // Tentukan URL & Method (POST untuk Baru, PUT untuk Edit)
+    let url = 'http://localhost:8080/api/animals'
+    let method = 'POST'
+
+    if (editingId.value) {
+      url = `http://localhost:8080/api/animals/${editingId.value}`
+      method = 'PUT'
+    }
+
+    const res = await fetch(url, {
+      method: method,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     })
 
+    const json = await res.json()
+    
     if (res.ok) {
-      alert("✅ Data Berhasil Disimpan!")
-      showForm.value = false
+      alert(editingId.value ? "✅ Data berhasil diupdate!" : "✅ Data berhasil disimpan!")
+      closeModal()
       fetchAnimals()
-      form.value = { ring_number: '', species: 'Lovebird', gender: 'U', visual: '', sire_id: null, sire_other: '', dam_id: null, dam_other: '', status: 'AVAILABLE' }
-      sireQuery.value = ''
-      damQuery.value = ''
     } else {
-      alert("Gagal menyimpan!")
+      alert("❌ Gagal: " + (json.error || "Terjadi kesalahan"))
     }
-  } catch (err) { console.error(err) } finally { loading.value = false }
+  } catch (err) {
+    alert("Error sistem: " + err.message)
+  } finally {
+    isSubmitting.value = false
+  }
 }
+
+// --- 3. DELETE DATA ---
+const deleteAnimal = async (id) => {
+  if (!confirm("⚠️ Yakin ingin menghapus data ini? Data yang dihapus tidak bisa dikembalikan.")) return
+
+  try {
+    const res = await fetch(`http://localhost:8080/api/animals/${id}`, { method: 'DELETE' })
+    if (res.ok) {
+      fetchAnimals() // Refresh list
+    } else {
+      alert("Gagal menghapus data")
+    }
+  } catch (err) { console.error(err) }
+}
+
+// --- HELPERS (MODAL & FORMATTING) ---
+const openModal = () => {
+  // Mode Tambah Baru: Reset form & editingId
+  editingId.value = null
+  form.value = {
+    ring_number: '', visual: '', gender: 'U', hatch_date: '',
+    sire_other: '', dam_other: '', status: 'Available', notes: ''
+  }
+  isModalOpen.value = true
+}
+
+const openEditModal = (bird) => {
+  // Mode Edit: Isi form dengan data yang dipilih
+  editingId.value = bird.id
+  form.value = { ...bird }
+  
+  // Format tanggal agar bisa masuk ke input type="date"
+  if (form.value.hatch_date) {
+    form.value.hatch_date = new Date(form.value.hatch_date).toISOString().split('T')[0]
+  }
+  
+  isModalOpen.value = true
+}
+
+const closeModal = () => isModalOpen.value = false
+
+const formatDate = (d) => {
+  if (!d || d.startsWith('0001')) return '-'
+  return new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
+const filteredAnimals = computed(() => {
+  if (!searchQuery.value) return animals.value
+  const lower = searchQuery.value.toLowerCase()
+  return animals.value.filter(a => 
+    (a.visual && a.visual.toLowerCase().includes(lower)) || 
+    (a.ring_number && a.ring_number.toLowerCase().includes(lower))
+  )
+})
+
+onMounted(() => fetchAnimals())
 </script>
 
 <template>
-  <div class="pb-20 max-w-6xl mx-auto">
+  <div class="space-y-6 p-2">
     
-    <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
       <div>
-        <h2 class="text-3xl font-bold text-slate-800 dark:text-white">Daftar Burung</h2>
-        <p class="text-slate-500 dark:text-slate-400">Total: {{ animals.length }} Ekor</p>
+        <h2 class="text-3xl font-extrabold text-slate-800 dark:text-white flex items-center gap-3">
+          <Bird class="w-8 h-8 text-blue-500" /> Stok Burung
+        </h2>
+        <p class="text-slate-500 mt-1 text-sm md:text-base">Kelola database burung, silsilah, dan status penjualan.</p>
       </div>
-      <div class="flex gap-3 w-full md:w-auto">
-        <input 
-          v-model="searchQuery" 
-          placeholder="🔍 Cari Ring / Visual..." 
-          class="w-full md:w-64 pl-4 p-3 rounded-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-green-500 shadow-sm transition-colors"
-        >
-        <button @click="showForm = !showForm" class="bg-blue-600 text-white px-6 py-3 rounded-full hover:bg-blue-700 font-bold shadow-lg flex items-center gap-2 whitespace-nowrap transition-transform hover:scale-105">
-          <span>+</span> Input Baru
+      
+      <div class="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+        <div class="relative flex-1">
+          <Search class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+          <input 
+            v-model="searchQuery" type="text" placeholder="Cari Ring / Visual..." 
+            class="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 dark:text-white shadow-sm transition"
+          >
+        </div>
+        <button @click="openModal" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 active:scale-95 transition">
+          <Plus class="w-5 h-5" /> <span>Data Baru</span>
         </button>
       </div>
     </div>
 
-    <div v-if="showForm" class="bg-white dark:bg-[#1e293b] p-8 rounded-2xl shadow-xl mb-10 border border-slate-200 dark:border-slate-700 animate-fade-in relative z-40 transition-colors duration-300">
-      <h3 class="text-xl font-bold mb-6 text-slate-700 dark:text-slate-200 border-b dark:border-slate-700 pb-2">📝 Biodata Burung</h3>
-      <form @submit.prevent="submitAnimal" class="grid grid-cols-1 md:grid-cols-2 gap-8">
-        
-        <div class="space-y-4">
-          <h4 class="font-bold text-sm text-blue-600 dark:text-blue-400 uppercase border-b dark:border-slate-700 pb-1">1. Identitas</h4>
-          
-          <div>
-            <label class="text-xs font-bold text-slate-500 dark:text-slate-400">Nomor Ring</label>
-            <input v-model="form.ring_number" placeholder="Contoh: VF-001" class="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500" required>
-          </div>
-          
-          <div>
-            <label class="text-xs font-bold text-slate-500 dark:text-slate-400">Warna / Visual</label>
-            <input v-model="form.visual" placeholder="Contoh: Biola Green" class="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white" required>
-          </div>
-          
-          <div class="flex gap-4">
-            <div class="w-1/2">
-              <label class="text-xs font-bold text-slate-500 dark:text-slate-400">Jenis Kelamin</label>
-              <select v-model="form.gender" class="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white">
-                <option value="U">❓ Unknown</option>
-                <option value="M">♂️ Jantan</option>
-                <option value="F">♀️ Betina</option>
-              </select>
-            </div>
-            <div class="w-1/2">
-              <label class="text-xs font-bold text-slate-500 dark:text-slate-400">Status</label>
-              <select v-model="form.status" class="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg font-bold text-slate-900 dark:text-white">
-                <option value="AVAILABLE">✅ Available</option>
-                <option value="SOLD">❌ Sold</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <div class="space-y-5 relative">
-          <h4 class="font-bold text-sm text-purple-600 dark:text-purple-400 uppercase border-b dark:border-slate-700 pb-1">2. Data Indukan</h4>
-          
-          <div class="bg-blue-50 dark:bg-slate-800 p-4 rounded-lg border border-blue-100 dark:border-slate-700 relative">
-            <label class="block text-xs font-bold text-blue-800 dark:text-blue-300 mb-2">Bapak (Sire)</label>
-            <input 
-              v-model="sireQuery" 
-              @input="onSireInput"
-              @focus="showSireList = true"
-              placeholder="Ketik Ring Bapak..." 
-              class="w-full p-3 border border-blue-200 dark:border-slate-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-400 bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
-            >
-            <ul v-if="showSireList && filteredSires.length > 0" class="absolute left-0 right-0 bg-white dark:bg-slate-800 border dark:border-slate-600 shadow-xl max-h-48 overflow-y-auto z-50 rounded-lg mx-4 mt-1">
-              <li v-for="bird in filteredSires" :key="bird.id" @click="selectSire(bird)" class="p-3 hover:bg-blue-100 dark:hover:bg-slate-700 cursor-pointer text-sm border-b dark:border-slate-700 flex justify-between text-slate-700 dark:text-slate-200">
-                <span class="font-bold text-blue-800 dark:text-blue-400">{{ bird.ring_number }}</span> 
-                <span class="text-gray-600 dark:text-gray-400">{{ bird.visual }}</span>
-              </li>
-            </ul>
-            <p class="text-[10px] text-blue-400 dark:text-slate-500 mt-1 italic">*Pilih dari list atau ketik manual jika dari luar.</p>
-          </div>
-
-          <div class="bg-pink-50 dark:bg-slate-800 p-4 rounded-lg border border-pink-100 dark:border-slate-700 relative">
-            <label class="block text-xs font-bold text-pink-800 dark:text-pink-300 mb-2">Ibu (Dam)</label>
-            <input 
-              v-model="damQuery" 
-              @input="onDamInput"
-              @focus="showDamList = true"
-              placeholder="Ketik Ring Ibu..." 
-              class="w-full p-3 border border-pink-200 dark:border-slate-600 rounded-lg text-sm focus:ring-2 focus:ring-pink-400 bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
-            >
-            <ul v-if="showDamList && filteredDams.length > 0" class="absolute left-0 right-0 bg-white dark:bg-slate-800 border dark:border-slate-600 shadow-xl max-h-48 overflow-y-auto z-50 rounded-lg mx-4 mt-1">
-              <li v-for="bird in filteredDams" :key="bird.id" @click="selectDam(bird)" class="p-3 hover:bg-pink-100 dark:hover:bg-slate-700 cursor-pointer text-sm border-b dark:border-slate-700 flex justify-between text-slate-700 dark:text-slate-200">
-                <span class="font-bold text-pink-800 dark:text-pink-400">{{ bird.ring_number }}</span> 
-                <span class="text-gray-600 dark:text-gray-400">{{ bird.visual }}</span>
-              </li>
-            </ul>
-            <p class="text-[10px] text-pink-400 dark:text-slate-500 mt-1 italic">*Pilih dari list atau ketik manual jika dari luar.</p>
-          </div>
-        </div>
-
-        <button type="submit" class="md:col-span-2 bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-bold shadow-lg mt-4 transition-colors">
-          {{ loading ? 'Menyimpan...' : 'SIMPAN DATA' }}
-        </button>
-      </form>
+    <div v-if="loading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6">
+       <div v-for="i in 6" :key="i" class="bg-white dark:bg-slate-800 h-56 rounded-2xl animate-pulse"></div>
+    </div>
+    
+    <div v-else-if="filteredAnimals.length === 0" class="text-center py-20 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-700">
+       <div class="w-16 h-16 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+         <Bird class="w-8 h-8 text-slate-300" />
+       </div>
+       <h3 class="text-lg font-bold text-slate-600 dark:text-slate-300">Data Tidak Ditemukan</h3>
+       <button @click="openModal" class="text-blue-500 font-bold hover:underline text-sm mt-2">Input Data Baru</button>
     </div>
 
-    <div v-if="filteredAnimals.length === 0" class="text-center py-20 text-gray-400">
-      <p v-if="searchQuery">Tidak ada burung dengan kata kunci "<b>{{ searchQuery }}</b>"</p>
-      <p v-else>Belum ada data burung.</p>
-    </div>
-
-    <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <div v-for="bird in filteredAnimals" :key="bird.id" class="bg-white dark:bg-[#1e293b] rounded-2xl shadow-sm dark:shadow-lg hover:shadow-xl transition duration-300 overflow-hidden border border-slate-100 dark:border-slate-700 flex flex-col relative group">
-        
-        <div v-if="bird.status === 'SOLD'" class="absolute top-0 right-0 bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-bl-lg z-10 shadow-sm">SOLD OUT</div>
-
-        <div class="p-4 flex items-start justify-between bg-gradient-to-r from-gray-50 to-white dark:from-slate-800 dark:to-slate-700 pt-6 border-b dark:border-slate-600">
-          <div>
-            <h3 class="font-bold text-lg text-slate-800 dark:text-white transition-colors" :class="{'line-through text-slate-400 dark:text-slate-500': bird.status === 'SOLD'}">
-              {{ bird.visual }}
-            </h3>
-            <p class="text-xs font-mono text-slate-500 dark:text-slate-300 bg-slate-200 dark:bg-slate-600 inline-block px-2 py-0.5 rounded mt-1">
-              {{ bird.ring_number }}
-            </p>
-          </div>
-          <span class="text-xl font-bold px-3 py-1 rounded-full shadow-sm" 
-            :class="bird.gender === 'M' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/50 dark:text-blue-200' : bird.gender === 'F' ? 'bg-pink-100 text-pink-600 dark:bg-pink-900/50 dark:text-pink-200' : 'bg-gray-100 text-gray-500 dark:bg-slate-600 dark:text-gray-300'">
-            {{ bird.gender === 'M' ? '♂' : bird.gender === 'F' ? '♀' : '?' }}
-          </span>
+    <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6">
+      <div 
+        v-for="bird in filteredAnimals" 
+        :key="bird.id"
+        class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group overflow-hidden flex flex-col"
+      >
+        <div class="p-5 flex justify-between items-start relative">
+           <div class="absolute top-4 right-4">
+             <span class="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border"
+               :class="{
+                 'bg-green-50 text-green-700 border-green-200': bird.status === 'Available',
+                 'bg-red-50 text-red-700 border-red-200': bird.status === 'Sold',
+                 'bg-slate-100 text-slate-600 border-slate-200': bird.status === 'Dead' || bird.status === 'Keep'
+               }">
+               {{ bird.status }}
+             </span>
+           </div>
+           <div class="pr-16"> 
+             <span class="inline-block px-2 py-0.5 bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 text-[10px] font-mono font-bold rounded mb-2">
+               #{{ bird.ring_number || 'NO-RING' }}
+             </span>
+             <h3 class="text-xl font-bold text-slate-800 dark:text-white leading-tight break-words" :title="bird.visual">
+               {{ bird.visual }}
+             </h3>
+           </div>
         </div>
 
-        <div class="px-4 py-3 border-t border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-[#1e293b] text-sm space-y-2">
-          <div class="flex items-center gap-2">
-            <span class="text-blue-500 font-bold w-4">♂</span>
-            <span v-if="bird.sire" class="text-slate-800 dark:text-slate-300 font-medium truncate">{{ bird.sire.visual }} ({{ bird.sire.ring_number }})</span>
-            <span v-else-if="bird.sire_other" class="text-slate-600 dark:text-slate-400 italic truncate">{{ bird.sire_other }}</span>
-            <span v-else class="text-slate-300 dark:text-slate-600 text-xs">-</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="text-pink-500 font-bold w-4">♀</span>
-            <span v-if="bird.dam" class="text-slate-800 dark:text-slate-300 font-medium truncate">{{ bird.dam.visual }} ({{ bird.dam.ring_number }})</span>
-            <span v-else-if="bird.dam_other" class="text-slate-600 dark:text-slate-400 italic truncate">{{ bird.dam_other }}</span>
-            <span v-else class="text-slate-300 dark:text-slate-600 text-xs">-</span>
+        <div class="px-5 pb-5 flex-1">
+          <div class="flex items-start gap-4">
+            <div class="flex-shrink-0">
+              <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold shadow-md text-lg"
+                :class="{
+                  'bg-gradient-to-br from-blue-500 to-blue-600': bird.gender === 'M',
+                  'bg-gradient-to-br from-pink-500 to-pink-600': bird.gender === 'F',
+                  'bg-slate-400': bird.gender === 'U'
+                }">
+                {{ bird.gender === 'M' ? '♂' : bird.gender === 'F' ? '♀' : '?' }}
+              </div>
+            </div>
+            <div class="flex-1 bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3 border border-slate-100 dark:border-slate-700/50 space-y-2">
+              <div class="flex items-center gap-2 overflow-hidden">
+                <span class="w-5 h-5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-[10px] font-bold flex-shrink-0">S</span>
+                <span class="text-xs font-medium text-slate-600 dark:text-slate-300 truncate">{{ bird.sire_other || '-' }}</span>
+              </div>
+              <div class="flex items-center gap-2 overflow-hidden">
+                <span class="w-5 h-5 rounded-full bg-pink-100 text-pink-600 flex items-center justify-center text-[10px] font-bold flex-shrink-0">D</span>
+                <span class="text-xs font-medium text-slate-600 dark:text-slate-300 truncate">{{ bird.dam_other || '-' }}</span>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div class="p-4 bg-gray-50 dark:bg-slate-800/50 flex justify-between items-center mt-auto text-xs text-gray-500 dark:text-gray-400">
-           <span class="font-bold text-slate-400 dark:text-slate-500">DATA STOK</span>
-           <span v-if="bird.status === 'AVAILABLE'" class="text-green-600 dark:text-green-400 font-bold bg-green-100 dark:bg-green-900/30 px-2 py-0.5 rounded">AVAILABLE</span>
+        <div class="bg-slate-50 dark:bg-slate-900/30 px-5 py-3 border-t border-slate-100 dark:border-slate-700 flex justify-between items-center mt-auto">
+           <div class="flex items-center gap-1.5 text-xs text-slate-400 font-medium">
+             <Calendar class="w-3.5 h-3.5" />
+             <span>{{ formatDate(bird.hatch_date) }}</span>
+           </div>
+           
+           <div class="flex gap-2">
+             <button @click="openEditModal(bird)" class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition" title="Edit Data">
+               <Pencil class="w-4 h-4"/>
+             </button>
+             <button @click="deleteAnimal(bird.id)" class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition" title="Hapus Data">
+               <Trash class="w-4 h-4"/>
+             </button>
+           </div>
         </div>
+
       </div>
     </div>
+
+    <div v-if="isModalOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" @click.self="closeModal">
+      <div class="bg-white dark:bg-slate-900 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden animate-fade-in-up">
+        
+        <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-900">
+          <h3 class="font-bold text-lg text-slate-800 dark:text-white flex items-center gap-2">
+            <FileText class="w-5 h-5 text-blue-500" /> 
+            {{ editingId ? 'Edit Data Burung' : 'Tambah Data Baru' }}
+          </h3>
+          <button @click="closeModal" class="p-1 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-400 transition"><X class="w-5 h-5"/></button>
+        </div>
+
+        <div class="p-6 space-y-5 max-h-[75vh] overflow-y-auto">
+          <div class="grid grid-cols-3 gap-4">
+             <div class="col-span-1">
+                <label class="form-label">No. Ring</label>
+                <input v-model="form.ring_number" type="text" class="input-field font-mono" placeholder="001">
+             </div>
+             <div class="col-span-2">
+                <label class="form-label">Visual / Warna <span class="text-red-500">*</span></label>
+                <input v-model="form.visual" type="text" class="input-field" placeholder="Contoh: Biola Green" required>
+             </div>
+          </div>
+
+          <div>
+             <label class="form-label">Jenis Kelamin</label>
+             <div class="flex gap-3">
+               <button type="button" @click="form.gender = 'M'" class="gender-btn" :class="form.gender === 'M' ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white dark:bg-slate-800 border-slate-200 text-slate-500'">♂ Jantan</button>
+               <button type="button" @click="form.gender = 'F'" class="gender-btn" :class="form.gender === 'F' ? 'bg-pink-600 text-white border-pink-600 shadow-md' : 'bg-white dark:bg-slate-800 border-slate-200 text-slate-500'">♀ Betina</button>
+               <button type="button" @click="form.gender = 'U'" class="gender-btn" :class="form.gender === 'U' ? 'bg-slate-600 text-white border-slate-600 shadow-md' : 'bg-white dark:bg-slate-800 border-slate-200 text-slate-500'">? Unsex</button>
+             </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+             <div><label class="form-label">Bapak (Sire)</label><input v-model="form.sire_other" type="text" class="input-field" placeholder="Nama / Ring Bapak"></div>
+             <div><label class="form-label">Ibu (Dam)</label><input v-model="form.dam_other" type="text" class="input-field" placeholder="Nama / Ring Ibu"></div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div><label class="form-label">Tgl Menetas</label><input v-model="form.hatch_date" type="date" class="input-field"></div>
+            <div>
+              <label class="form-label">Status</label>
+              <select v-model="form.status" class="input-field">
+                <option value="Available">Available</option>
+                <option value="Sold">Sold</option>
+                <option value="Dead">Dead</option>
+                <option value="Keep">Keep</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="px-6 py-4 bg-slate-50 dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex gap-3">
+          <button @click="closeModal" class="flex-1 py-3 rounded-xl border border-slate-300 font-bold text-sm text-slate-500 hover:bg-slate-100 transition">Batal</button>
+          <button @click="saveAnimal" :disabled="isSubmitting" class="flex-1 py-3 rounded-xl bg-blue-600 text-white font-bold text-sm hover:bg-blue-700 transition shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2">
+            <Save v-if="!isSubmitting" class="w-5 h-5" />
+            <span>{{ isSubmitting ? 'Menyimpan...' : (editingId ? 'Update Data' : 'Simpan Data') }}</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+
   </div>
 </template>
+
+<style scoped>
+@keyframes fadeInUp { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+.animate-fade-in-up { animation: fadeInUp 0.3s ease-out forwards; }
+.form-label { @apply block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5; }
+.input-field { @apply w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 dark:text-white transition; }
+.gender-btn { @apply flex-1 py-2.5 rounded-xl border font-bold text-sm transition shadow-sm hover:border-slate-300; }
+</style>

@@ -6,7 +6,8 @@ import DashboardView from '../views/DashboardView.vue'
 import AnimalsView from '../views/AnimalsView.vue'
 import OverviewView from '../views/OverviewView.vue'
 import PairsView from '../views/PairsView.vue'
-import SettingsView from '../views/SettingsView.vue' // <--- 1. Import Ini
+import SettingsView from '../views/SettingsView.vue'
+import IncubatingView from '../views/IncubatingView.vue' // <--- 1. Import Ini
 
 // Placeholder Page
 const ComingSoon = { template: '<div class="p-10 text-center text-slate-400 text-xl border-2 border-dashed border-slate-300 rounded-xl">🚧 Fitur ini sedang dibangun!</div>' }
@@ -27,9 +28,7 @@ const router = createRouter({
         { path: 'animals', name: 'animals', component: AnimalsView },
         { path: 'pairs', name: 'pairs', component: PairsView },
         { path: 'settings', name: 'settings', component: SettingsView }, // <--- 2. Tambah Ini
-        
-        // Sisa Menu (Coming Soon)
-        { path: 'incubating', component: ComingSoon },
+        { path: 'incubating', name: 'incubating', component: IncubatingView }, 
         { path: 'pending', component: ComingSoon },
         { path: 'gencal', component: ComingSoon },
         { path: 'rings', component: ComingSoon },
