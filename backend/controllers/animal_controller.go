@@ -28,15 +28,13 @@ func CreateAnimal(c *gin.Context) {
 }
 
 // 2. LIHAT DAFTAR BURUNG SAYA (Private - Dashboard)
-// Hanya menampilkan burung milik User yang sedang login
 func GetMyAnimals(c *gin.Context) {
 	userID := c.Query("user_id")
 
 	var animals []models.Animal
 
-	// Tambahkan Preload("Sire") dan Preload("Dam")
-	// Artinya: "Tolong ambilkan juga data Bapak dan Ibunya sekalian"
-	if err := config.DB.Preload("Sire").Preload("Dam").Where("user_id = ?", userID).Find(&animals).Error; err != nil {
+	// Mengambil data burung milik user tersebut
+	if err := config.DB.Where("user_id = ?", userID).Find(&animals).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal mengambil data"})
 		return
 	}
@@ -45,12 +43,11 @@ func GetMyAnimals(c *gin.Context) {
 }
 
 // 3. AMBIL DATA PUBLIK (Public - Home Page)
-// Menampilkan SEMUA burung yang statusnya AVAILABLE (tanpa peduli pemiliknya)
 func GetPublicAnimals(c *gin.Context) {
 	var animals []models.Animal
 
 	// Ambil semua hewan yang statusnya 'AVAILABLE'
-	if err := config.DB.Preload("Sire").Preload("Dam").Where("status = ?", "AVAILABLE").Find(&animals).Error; err != nil {
+	if err := config.DB.Where("status = ?", "AVAILABLE").Find(&animals).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal mengambil data"})
 		return
 	}
@@ -58,21 +55,59 @@ func GetPublicAnimals(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": animals})
 }
 
-// 4. AMBIL STATISTIK FARM (Dashboard)
+// 4. AMBIL STATISTIK FARM (Opsional - Jika masih dipakai)
 func GetFarmStats(c *gin.Context) {
 	userID := c.Query("user_id")
 
 	var totalBirds int64
 	var totalSold int64
 
-	// Hitung Burung yang Masih Ada (AVAILABLE)
 	config.DB.Model(&models.Animal{}).Where("user_id = ? AND status = ?", userID, "AVAILABLE").Count(&totalBirds)
-
-	// Hitung Burung yang Terjual (SOLD)
 	config.DB.Model(&models.Animal{}).Where("user_id = ? AND status = ?", userID, "SOLD").Count(&totalSold)
 
 	c.JSON(http.StatusOK, gin.H{
 		"total_birds": totalBirds,
 		"total_sold":  totalSold,
 	})
+}
+
+// ==========================================
+// TAMBAHAN BARU UNTUK EDIT & HAPUS
+// ==========================================
+
+// 5. UPDATE DATA BURUNG (Edit)
+func UpdateAnimal(c *gin.Context) {
+	id := c.Param("id") // Ambil ID dari URL
+	var input models.Animal
+
+	// Validasi input JSON
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Cari data lama berdasarkan ID
+	var animal models.Animal
+	if err := config.DB.First(&animal, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Data tidak ditemukan"})
+		return
+	}
+
+	// Update data di database
+	config.DB.Model(&animal).Updates(input)
+
+	c.JSON(http.StatusOK, gin.H{"message": "Data berhasil diupdate!", "data": animal})
+}
+
+// 6. HAPUS DATA BURUNG (Delete)
+func DeleteAnimal(c *gin.Context) {
+	id := c.Param("id") // Ambil ID dari URL
+	
+	// Hapus data berdasarkan ID
+	if err := config.DB.Delete(&models.Animal{}, id).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal menghapus data"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Data berhasil dihapus!"})
 }
