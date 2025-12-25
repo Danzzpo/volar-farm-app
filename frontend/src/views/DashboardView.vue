@@ -148,4 +148,4 @@ router.afterEach(() => {
 .fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease, transform 0.2s ease; }
 .fade-enter-from { opacity: 0; transform: translateY(5px); }
 .fade-leave-to { opacity: 0; transform: translateY(-5px); }
-</style>
+</style> 
