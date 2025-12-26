@@ -7,7 +7,8 @@ import AnimalsView from '../views/AnimalsView.vue'
 import OverviewView from '../views/OverviewView.vue'
 import PairsView from '../views/PairsView.vue'
 import SettingsView from '../views/SettingsView.vue'
-import IncubatingView from '../views/IncubatingView.vue' // <--- 1. Import Ini
+import IncubatingView from '../views/IncubatingView.vue' 
+import FinanceView from '../views/FinanceView.vue'// <--- 1. Import Ini
 
 // Placeholder Page
 const ComingSoon = { template: '<div class="p-10 text-center text-slate-400 text-xl border-2 border-dashed border-slate-300 rounded-xl">🚧 Fitur ini sedang dibangun!</div>' }
@@ -33,7 +34,7 @@ const router = createRouter({
         { path: 'gencal', component: ComingSoon },
         { path: 'rings', component: ComingSoon },
         { path: 'treatments', component: ComingSoon },
-        { path: 'finance', component: ComingSoon },
+        { path: 'finance', component: FinanceView },
       ]
     },
   ]
