@@ -55,6 +55,12 @@ func main() {
 
 		// Stats
 		api.GET("/stats", controllers.GetFarmStats)
+
+		// FINANCE (KEUANGAN)
+		api.GET("/finance/summary", controllers.GetFinanceSummary)
+		api.GET("/finance/transactions", controllers.GetTransactions)
+		api.POST("/finance/transactions", controllers.CreateTransaction)
+		api.DELETE("/finance/transactions/:id", controllers.DeleteTransaction)
 	}
 
 	r.Run(":8080")
