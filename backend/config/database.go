@@ -33,7 +33,8 @@ func ConnectDatabase() {
 		&models.Animal{},      // Tabel Animals (Stok Burung)
 		&models.Pair{},        // Tabel Pairs (Jodohan)
 		&models.Incubation{},  // Tabel Incubations (Pengeraman)
-		&models.Transaction{}, // Tabel Transactions (Keuangan/Finance) <--- BARU
+		&models.Transaction{}, // Tabel Transactions (Keuangan/Finance)
+		&models.Treatment{},	// TRitmen <--- BARU
 	)
 
 	if err != nil {

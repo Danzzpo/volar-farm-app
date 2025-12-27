@@ -2,12 +2,14 @@
 import { ref, onMounted } from 'vue'
 import { 
   User, Lock, Moon, Store, Bell, Shield, LogOut, 
-  Camera, MapPin, Smartphone, Mail, Save, ChevronRight
+  Camera, MapPin, Smartphone, Mail, Save, ChevronRight, Globe
 } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n' // <--- Import i18n
 
 const router = useRouter()
-const activeTab = ref('profile') // Default tab: profile, farm, security, preference
+const { locale } = useI18n() // <--- Gunakan hook i18n untuk akses bahasa aktif
+const activeTab = ref('profile') 
 const isLoading = ref(false)
 const isDarkMode = ref(false)
 
@@ -29,6 +31,7 @@ const form = ref({
   new_password: '',
   
   // Preferences
+  language: localStorage.getItem('language') || 'id', // Default ID
   notif_wa: true,
   notif_email: false
 })
@@ -53,14 +56,19 @@ const toggleTheme = () => {
 const saveSettings = () => {
   isLoading.value = true
   setTimeout(() => {
-    // Simpan ke LocalStorage
+    // 1. Simpan ke LocalStorage
     localStorage.setItem('username', form.value.name)
     localStorage.setItem('farm_name', form.value.farm_name)
+    localStorage.setItem('language', form.value.language)
     
+    // 2. UBAH BAHASA SECARA LANGSUNG (Realtime)
+    locale.value = form.value.language
+
     isLoading.value = false
     alert(`✅ Pengaturan ${activeTab.value} berhasil disimpan!`)
     
-    // Refresh halaman jika nama berubah agar sidebar update
+    // Refresh halaman HANYA jika profil berubah (agar sidebar nama/farm update)
+    // Untuk bahasa tidak perlu refresh karena sudah pakai locale.value
     if (activeTab.value === 'profile' || activeTab.value === 'farm') {
         window.location.reload()
     }
@@ -79,7 +87,7 @@ const tabs = [
   { id: 'profile', label: 'Profil Akun', icon: User, desc: 'Identitas & Kontak' },
   { id: 'farm', label: 'Data Farm', icon: Store, desc: 'Informasi Peternakan' },
   { id: 'security', label: 'Keamanan', icon: Shield, desc: 'Password & Akses' },
-  { id: 'preference', label: 'Tampilan', icon: Moon, desc: 'Tema & Notifikasi' },
+  { id: 'preference', label: 'Tampilan & Bahasa', icon: Moon, desc: 'Tema, Bahasa & Notifikasi' },
 ]
 </script>
 
@@ -164,7 +172,7 @@ const tabs = [
           <div v-if="activeTab === 'farm'" class="space-y-6 animate-fade-in-up">
              <div class="border-l-4 border-blue-500 pl-4 py-1 mb-6 bg-blue-50 dark:bg-blue-900/20 rounded-r-lg">
                 <h3 class="font-bold text-slate-800 dark:text-white">Identitas Peternakan</h3>
-                <p class="text-sm text-slate-500 dark:text-slate-400">Data ini akan muncul di laporan dan sertifikat silsilah (pedigree).</p>
+                <p class="text-sm text-slate-500 dark:text-slate-400">Data ini akan muncul di laporan dan sertifikat silsilah.</p>
              </div>
 
              <div class="grid grid-cols-1 gap-5">
@@ -235,7 +243,23 @@ const tabs = [
                 </button>
              </div>
 
-             <div class="space-y-4 pt-4">
+             <div class="flex items-center justify-between p-4 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-900/30">
+                <div class="flex items-center gap-3">
+                   <div class="p-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 rounded-lg">
+                      <Globe class="w-6 h-6" />
+                   </div>
+                   <div>
+                      <p class="font-bold text-slate-800 dark:text-white">Bahasa Aplikasi</p>
+                      <p class="text-xs text-slate-500">Pilih bahasa antarmuka.</p>
+                   </div>
+                </div>
+                <select v-model="form.language" class="bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 outline-none font-bold">
+                   <option value="id">🇮🇩 Indonesia</option>
+                   <option value="en">🇺🇸 English</option>
+                </select>
+             </div>
+
+             <div class="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-700">
                <h4 class="font-bold text-sm text-slate-800 dark:text-white uppercase tracking-wider">Notifikasi</h4>
                
                <div class="flex items-center justify-between">
@@ -256,7 +280,7 @@ const tabs = [
              </div>
           </div>
 
-          <div v-if="activeTab !== 'preference'" class="mt-8 pt-6 border-t border-slate-100 dark:border-slate-700 flex justify-end">
+          <div class="mt-8 pt-6 border-t border-slate-100 dark:border-slate-700 flex justify-end">
              <button @click="saveSettings" :disabled="isLoading" class="btn-primary">
                 <Save class="w-4 h-4" />
                 <span>{{ isLoading ? 'Menyimpan...' : 'Simpan Perubahan' }}</span>
@@ -270,7 +294,7 @@ const tabs = [
 </template>
 
 <style scoped>
-/* Utility CSS untuk kebersihan kode */
+/* Utility CSS */
 .form-label {
   @apply block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5;
 }
@@ -279,7 +303,6 @@ const tabs = [
   @apply relative;
 }
 
-/* Teknik Absolute Center Icon yang Paling Aman */
 .input-icon {
   @apply absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none;
 }

@@ -1,0 +1,34 @@
+{
+  "menu": {
+    "dashboard": "Dashboard",
+    "birds": "Bird Stock",
+    "pairs": "Breeding Pairs",
+    "incubating": "Incubation",
+    "gencal": "Genetics Calc",
+    "treatments": "Treatments",
+    "finance": "Finance",
+    "settings": "Settings"
+  },
+  "settings": {
+    "title": "Settings",
+    "logout": "Logout"
+  },
+  "overview": {
+    "title": "Farm Overview",
+    "subtitle": "Monitor your farm performance today.",
+    "total_birds": "Total Birds",
+    "active_pairs": "Active Pairs",
+    "eggs": "Incubating Eggs",
+    "hatchlings": "New Hatchlings"
+  },
+  "treatments": {
+    "title": "Health & Treatments",
+    "subtitle": "Schedule for vitamins, medications, and vaccinations.",
+    "add_btn": "Add Record",
+    "type": "Type",
+    "name": "Medicine Name",
+    "date": "Date Given",
+    "next_date": "Next Schedule",
+    "note": "Note"
+  }
+}

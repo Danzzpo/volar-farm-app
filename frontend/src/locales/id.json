@@ -1,0 +1,34 @@
+{
+  "menu": {
+    "dashboard": "Dashboard",
+    "birds": "Stok Burung",
+    "pairs": "Pasangan",
+    "incubating": "Pengeraman",
+    "gencal": "Kalkulator Gen",
+    "treatments": "Perawatan",
+    "finance": "Keuangan",
+    "settings": "Pengaturan"
+  },
+  "settings": {
+    "title": "Pengaturan",
+    "logout": "Keluar"
+  },
+  "overview": {
+    "title": "Ringkasan Farm",
+    "subtitle": "Pantau performa peternakan Anda hari ini.",
+    "total_birds": "Total Burung",
+    "active_pairs": "Pasangan Aktif",
+    "eggs": "Telur Mengeram",
+    "hatchlings": "Anakan Baru"
+  },
+  "treatments": {
+    "title": "Perawatan & Kesehatan",
+    "subtitle": "Jadwal pemberian vitamin, obat, dan vaksinasi.",
+    "add_btn": "Catat Perawatan",
+    "type": "Jenis",
+    "name": "Nama Obat/Vit",
+    "date": "Tanggal Beri",
+    "next_date": "Jadwal Berikutnya",
+    "note": "Catatan"
+  }
+}

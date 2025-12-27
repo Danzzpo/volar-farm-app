@@ -55,19 +55,35 @@ func GetPublicAnimals(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": animals})
 }
 
-// 4. AMBIL STATISTIK FARM (Opsional - Jika masih dipakai)
+// 4. AMBIL STATISTIK FARM (LENGKAP)
 func GetFarmStats(c *gin.Context) {
 	userID := c.Query("user_id")
 
 	var totalBirds int64
 	var totalSold int64
+	var activePairs int64
+	var incubatingEggs int64
 
+	// 1. Hitung Stok Burung
 	config.DB.Model(&models.Animal{}).Where("user_id = ? AND status = ?", userID, "AVAILABLE").Count(&totalBirds)
+	
+	// 2. Hitung Terjual
 	config.DB.Model(&models.Animal{}).Where("user_id = ? AND status = ?", userID, "SOLD").Count(&totalSold)
 
+	// 3. Hitung Pasangan (Tambahkan ini agar tidak 0)
+	config.DB.Model(&models.Pair{}).Where("user_id = ?", userID).Count(&activePairs)
+
+	// 4. Hitung Pengeraman (Tambahkan ini agar tidak 0)
+	config.DB.Model(&models.Incubation{}).Where("user_id = ?", userID).Count(&incubatingEggs)
+
+	// Return format data yang sesuai dengan Frontend baru
 	c.JSON(http.StatusOK, gin.H{
-		"total_birds": totalBirds,
-		"total_sold":  totalSold,
+		"data": gin.H{
+			"total_birds":     totalBirds,
+			"total_sold":      totalSold,
+			"active_pairs":    activePairs,    // Data Pasangan
+			"incubating_eggs": incubatingEggs, // Data Pengeraman
+		},
 	})
 }
 

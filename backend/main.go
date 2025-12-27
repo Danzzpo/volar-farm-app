@@ -61,6 +61,11 @@ func main() {
 		api.GET("/finance/transactions", controllers.GetTransactions)
 		api.POST("/finance/transactions", controllers.CreateTransaction)
 		api.DELETE("/finance/transactions/:id", controllers.DeleteTransaction)
+
+		// TREATMENTS (PERAWATAN)
+		api.GET("/treatments", controllers.GetTreatments)
+		api.POST("/treatments", controllers.CreateTreatment)
+		api.DELETE("/treatments/:id", controllers.DeleteTreatment)
 	}
 
 	r.Run(":8080")
