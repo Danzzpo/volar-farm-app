@@ -1,8 +1,8 @@
 <script setup>
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, onMounted, computed, nextTick } from 'vue'
 import { 
   Circle, Calendar, Clock, Plus, Minus,
-  ArrowRight, Bird, X, Save, Egg, Search, ChevronDown, Check 
+  ArrowRight, Bird, X, Save, Egg, Search, ChevronDown, Check, Loader2 
 } from 'lucide-vue-next'
 
 const incubations = ref([])
@@ -20,9 +20,16 @@ const dropdownRef = ref(null)
 
 const form = ref({
   pair_id: '',
-  start_date: '',
+  start_date: new Date().toISOString().split('T')[0], // Default Hari Ini
   egg_count: 1,
   notes: ''
+})
+
+// COMPUTED UNTUK TAMPILAN TANGGAL AGAR RAPI
+const displayDate = computed(() => {
+  if (!form.value.start_date) return 'Pilih Tanggal'
+  const date = new Date(form.value.start_date)
+  return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
 })
 
 const fetchIncubations = async () => {
@@ -66,7 +73,12 @@ const getProgress = (startDate) => {
 
 const openModal = () => {
   fetchActivePairs()
-  form.value = { pair_id: '', start_date: new Date().toISOString().split('T')[0], egg_count: 1, notes: '' }
+  form.value = { 
+    pair_id: '', 
+    start_date: new Date().toISOString().split('T')[0], 
+    egg_count: 1, 
+    notes: '' 
+  }
   selectedPairLabel.value = ''
   searchQuery.value = ''
   isModalOpen.value = true
@@ -188,7 +200,7 @@ onMounted(() => fetchIncubations())
       </div>
     </div>
 
-    <div v-if="isModalOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto no-scrollbar" @click.self="isModalOpen = false">
+    <div v-if="isModalOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm overflow-y-auto no-scrollbar" @click.self="isModalOpen = false">
       
       <div class="bg-white dark:bg-slate-900 w-full max-w-lg rounded-2xl shadow-2xl animate-fade-in-up flex flex-col relative my-8">
         
@@ -226,19 +238,25 @@ onMounted(() => fetchIncubations())
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div class="relative">
               <label class="form-label">Tgl Mulai</label>
-              <div class="relative w-full">
+              
+              <div class="relative w-full h-[54px]">
+                
+                <div class="absolute inset-0 w-full h-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl flex items-center px-4 pointer-events-none">
+                   <Calendar class="w-5 h-5 text-yellow-500 mr-3 shrink-0" />
+                   <span class="font-bold text-slate-700 dark:text-white truncate text-base">{{ displayDate }}</span>
+                </div>
+
                 <input 
                   v-model="form.start_date" 
                   type="date" 
-                  class="input-field cursor-pointer pl-[60px]"
+                  class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                 >
-                <Calendar class="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-yellow-500 pointer-events-none bg-transparent" />
               </div>
             </div>
             
             <div>
               <label class="form-label">Jumlah Telur</label>
-              <div class="flex items-center h-[52px]">
+              <div class="flex items-center h-[54px]">
                  <button 
                    @click="decrementEgg"
                    type="button" 
@@ -298,16 +316,16 @@ onMounted(() => fetchIncubations())
 @keyframes fadeInUp { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
 .animate-fade-in-up { animation: fadeInUp 0.3s ease-out forwards; }
 
-/* FIX: Sembunyikan scrollbar di overlay tapi tetap bisa scroll */
+/* FIX: SCROLL OVERLAY (Hide scrollbar but allow scrolling) */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
 .no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
 }
 
-/* SCROLLBAR MODERN (Untuk Dropdown & Textarea) */
+/* CUSTOM SCROLLBAR (Textarea) */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
 }
@@ -326,19 +344,5 @@ input[type=number]::-webkit-inner-spin-button,
 input[type=number]::-webkit-outer-spin-button { 
   -webkit-appearance: none; 
   margin: 0; 
-}
-
-/* FIX: Sembunyikan ikon bawaan browser */
-input[type="date"]::-webkit-calendar-picker-indicator {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  cursor: pointer;
-  background: transparent;
 }
 </style>
