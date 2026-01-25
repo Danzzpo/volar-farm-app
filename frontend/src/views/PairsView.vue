@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import BirdSelect from '../components/BirdSelect.vue' 
 import { 
   HeartHandshake, Search, Plus, X, Save, 
-  Bird, Calendar, AlertCircle, Trash2, Power, History, Home // <--- TAMBAH IMPORT HOME
+  Bird, Calendar, AlertCircle, Trash2, Power, History, Home 
 } from 'lucide-vue-next'
 
 const router = useRouter()
@@ -17,11 +17,8 @@ const isSubmitting = ref(false)
 const userId = localStorage.getItem('user_id')
 
 const form = ref({
-  male_id: "",
-  female_id: "",
-  cage: '',
-  pair_date: new Date().toISOString().split('T')[0],
-  notes: ''
+  male_id: "", female_id: "", cage: '',
+  pair_date: new Date().toISOString().split('T')[0], notes: ''
 })
 
 const filteredPairs = computed(() => {
@@ -211,52 +208,55 @@ const formatDate = (d) => new Date(d).toLocaleDateString('id-ID', {day: 'numeric
       </div>
     </div>
 
-    <div v-if="showModal" class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm" @click.self="showModal = false">
-      <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+    <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" @click.self="showModal = false">
+      
+      <div class="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-2xl shadow-2xl animate-fade-in-up flex flex-col">
         
-        <div class="relative transform bg-white dark:bg-slate-900 rounded-2xl shadow-2xl text-left transition-all sm:my-8 sm:w-full sm:max-w-2xl border border-slate-100 dark:border-slate-800">
+        <div class="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-900 shrink-0 rounded-t-2xl">
+          <h3 class="font-bold text-xl text-slate-800 dark:text-white flex items-center gap-2">
+            <HeartHandshake class="w-6 h-6 text-pink-500"/> Jodohkan Pasangan Baru
+          </h3>
+          <button @click="showModal = false" class="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 transition"><X class="w-6 h-6" /></button>
+        </div>
+
+        <div class="p-6 space-y-6">
           
-          <div class="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-900 rounded-t-2xl">
-            <h3 class="font-bold text-xl text-slate-800 dark:text-white flex items-center gap-2">
-              <HeartHandshake class="w-6 h-6 text-pink-500"/> Jodohkan Pasangan Baru
-            </h3>
-            <button @click="showModal = false" class="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 transition"><X class="w-6 h-6" /></button>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <BirdSelect label="Pejantan (Sire)" gender="Male" :userId="userId" v-model="form.male_id" />
+            <BirdSelect label="Betina (Dam)" gender="Female" :userId="userId" v-model="form.female_id" />
           </div>
 
-          <div class="p-6 space-y-6 bg-white dark:bg-slate-900">
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <BirdSelect label="Pejantan (Sire)" gender="Male" :userId="userId" v-model="form.male_id" />
-              <BirdSelect label="Betina (Dam)" gender="Female" :userId="userId" v-model="form.female_id" />
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label class="form-label">Nomor / Nama Kandang</label>
-                <input v-model="form.cage" type="text" placeholder="Contoh: Glodok A1" class="input-field">
-              </div>
-              <div>
-                <label class="form-label">Tanggal Masuk</label>
-                <input v-model="form.pair_date" type="date" class="input-field">
-              </div>
-            </div>
-
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label class="form-label">Catatan Tambahan</label>
-              <textarea v-model="form.notes" rows="3" placeholder="Kondisi burung, program ternak, dll..." class="input-field resize-none"></textarea>
+              <label class="form-label">Nomor / Nama Kandang</label>
+              <input v-model="form.cage" type="text" placeholder="Contoh: Glodok A1" class="input-field">
             </div>
-
+            <div>
+              <label class="form-label">Tanggal Masuk</label>
+              <input v-model="form.pair_date" type="date" class="input-field cursor-pointer">
+            </div>
           </div>
 
-          <div class="px-6 py-5 bg-slate-50 dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex gap-4 rounded-b-2xl">
-            <button @click="showModal = false" class="flex-1 py-3.5 rounded-xl border border-slate-300 font-bold text-base text-slate-600 hover:bg-slate-100 transition">Batal</button>
-            <button @click="submitPair" :disabled="isSubmitting" class="flex-1 py-3.5 rounded-xl bg-gradient-to-r from-pink-600 to-rose-600 text-white font-bold text-base hover:from-pink-700 hover:to-rose-700 transition shadow-lg shadow-pink-500/30 flex items-center justify-center gap-2">
-              <Save v-if="!isSubmitting" class="w-5 h-5" />
-              <span>{{ isSubmitting ? 'Menyimpan...' : 'Simpan Pasangan' }}</span>
-            </button>
+          <div>
+            <label class="form-label">Catatan Tambahan</label>
+            <textarea 
+              v-model="form.notes" 
+              rows="3" 
+              placeholder="Kondisi burung, program ternak, dll..." 
+              class="input-field resize-none custom-scrollbar">
+            </textarea>
           </div>
 
         </div>
+
+        <div class="px-6 py-5 bg-slate-50 dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex gap-4 shrink-0 rounded-b-2xl">
+          <button @click="showModal = false" class="flex-1 py-3.5 rounded-xl border border-slate-300 font-bold text-base text-slate-600 hover:bg-slate-100 transition">Batal</button>
+          <button @click="submitPair" :disabled="isSubmitting" class="flex-1 py-3.5 rounded-xl bg-gradient-to-r from-pink-600 to-rose-600 text-white font-bold text-base hover:from-pink-700 hover:to-rose-700 transition shadow-lg shadow-pink-500/30 flex items-center justify-center gap-2">
+            <Save v-if="!isSubmitting" class="w-5 h-5" />
+            <span>{{ isSubmitting ? 'Menyimpan...' : 'Simpan Pasangan' }}</span>
+          </button>
+        </div>
+
       </div>
     </div>
 
@@ -268,4 +268,9 @@ const formatDate = (d) => new Date(d).toLocaleDateString('id-ID', {day: 'numeric
 .input-field { @apply w-full p-3.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl text-base outline-none focus:ring-2 focus:ring-pink-500 dark:text-white transition shadow-sm; }
 @keyframes fadeInUp { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
 .animate-fade-in-up { animation: fadeInUp 0.3s ease-out forwards; }
+
+.custom-scrollbar::-webkit-scrollbar { width: 6px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: #94a3b8; }
 </style>

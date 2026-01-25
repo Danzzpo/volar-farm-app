@@ -1,6 +1,4 @@
 /** @type {import('tailwindcss').Config} */
-import scrollbar from 'tailwind-scrollbar'; // <--- Import plugin
-
 export default {
   darkMode: 'class',
   content: [
@@ -11,6 +9,6 @@ export default {
     extend: {},
   },
   plugins: [
-    scrollbar, // <--- Masukkan ke sini
+    require('tailwind-scrollbar') 
   ],
 }
