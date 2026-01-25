@@ -50,7 +50,7 @@ func Register(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Registrasi berhasil! Silakan login."})
-} // <--- JANGAN LUPA KURUNG TUTUP INI
+} 
 
 // ==========================
 // 2. BAGIAN LOGIN

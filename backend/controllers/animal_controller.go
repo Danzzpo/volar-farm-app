@@ -1,7 +1,9 @@
 package controllers
 
 import (
+	"math"
 	"net/http"
+	"strconv" // Penting untuk konversi halaman
 	"volar-farm-backend/config"
 	"volar-farm-backend/models"
 
@@ -30,16 +32,48 @@ func CreateAnimal(c *gin.Context) {
 // 2. LIHAT DAFTAR BURUNG SAYA (Private - Dashboard)
 func GetMyAnimals(c *gin.Context) {
 	userID := c.Query("user_id")
+	pageStr := c.DefaultQuery("page", "1")
+	limitStr := c.DefaultQuery("limit", "10")
+	search := c.Query("search")
+	status := c.Query("status") // <--- TANGKAP PARAMETER STATUS
+
+	// Konversi string ke int
+	page, _ := strconv.Atoi(pageStr)
+	limit, _ := strconv.Atoi(limitStr)
+	offset := (page - 1) * limit
 
 	var animals []models.Animal
+	var total int64
 
-	// Mengambil data burung milik user tersebut
-	if err := config.DB.Where("user_id = ?", userID).Find(&animals).Error; err != nil {
+	// Query Dasar
+	query := config.DB.Model(&models.Animal{}).Where("user_id = ?", userID)
+
+	// Filter Search (Pencarian Nama/Ring/Jenis)
+	if search != "" {
+		query = query.Where("(ring_number LIKE ? OR species LIKE ? OR visual LIKE ?)", "%"+search+"%", "%"+search+"%", "%"+search+"%")
+	}
+
+	// Filter Status (JIKA ADA PILIHAN STATUS)
+	if status != "" && status != "All" {
+		query = query.Where("status = ?", status)
+	}
+
+	// Hitung Total Data (setelah filter)
+	query.Count(&total)
+
+	// Ambil Data
+	if err := query.Limit(limit).Offset(offset).Preload("Sire").Preload("Dam").Order("created_at DESC").Find(&animals).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal mengambil data"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"data": animals})
+	c.JSON(http.StatusOK, gin.H{
+		"data":  animals,
+		"total": total,
+		"page":  page,
+		"limit": limit,
+		"pages": int(math.Ceil(float64(total) / float64(limit))),
+	})
 }
 
 // 3. AMBIL DATA PUBLIK (Public - Home Page)
@@ -70,46 +104,38 @@ func GetFarmStats(c *gin.Context) {
 	// 2. Hitung Terjual
 	config.DB.Model(&models.Animal{}).Where("user_id = ? AND status = ?", userID, "SOLD").Count(&totalSold)
 
-	// 3. Hitung Pasangan (Tambahkan ini agar tidak 0)
+	// 3. Hitung Pasangan
 	config.DB.Model(&models.Pair{}).Where("user_id = ?", userID).Count(&activePairs)
 
-	// 4. Hitung Pengeraman (Tambahkan ini agar tidak 0)
+	// 4. Hitung Pengeraman
 	config.DB.Model(&models.Incubation{}).Where("user_id = ?", userID).Count(&incubatingEggs)
 
-	// Return format data yang sesuai dengan Frontend baru
 	c.JSON(http.StatusOK, gin.H{
 		"data": gin.H{
 			"total_birds":     totalBirds,
 			"total_sold":      totalSold,
-			"active_pairs":    activePairs,    // Data Pasangan
-			"incubating_eggs": incubatingEggs, // Data Pengeraman
+			"active_pairs":    activePairs,    
+			"incubating_eggs": incubatingEggs, 
 		},
 	})
 }
 
-// ==========================================
-// TAMBAHAN BARU UNTUK EDIT & HAPUS
-// ==========================================
-
 // 5. UPDATE DATA BURUNG (Edit)
 func UpdateAnimal(c *gin.Context) {
-	id := c.Param("id") // Ambil ID dari URL
+	id := c.Param("id") 
 	var input models.Animal
 
-	// Validasi input JSON
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Cari data lama berdasarkan ID
 	var animal models.Animal
 	if err := config.DB.First(&animal, id).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Data tidak ditemukan"})
 		return
 	}
 
-	// Update data di database
 	config.DB.Model(&animal).Updates(input)
 
 	c.JSON(http.StatusOK, gin.H{"message": "Data berhasil diupdate!", "data": animal})
@@ -117,9 +143,8 @@ func UpdateAnimal(c *gin.Context) {
 
 // 6. HAPUS DATA BURUNG (Delete)
 func DeleteAnimal(c *gin.Context) {
-	id := c.Param("id") // Ambil ID dari URL
+	id := c.Param("id") 
 	
-	// Hapus data berdasarkan ID
 	if err := config.DB.Delete(&models.Animal{}, id).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal menghapus data"})
 		return

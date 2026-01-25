@@ -8,7 +8,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// Struct untuk respons JSON yang rapi
 type IncubationResponse struct {
 	ID         uint   `json:"id"`
 	PairID     uint   `json:"pair_id"`
@@ -30,7 +29,6 @@ func GetIncubations(c *gin.Context) {
 	userID := c.Query("user_id")
 	var results []IncubationResponse
 
-	// Menggunakan Raw SQL via GORM untuk Join yang kompleks
 	query := `
 		SELECT 
 			i.id, i.pair_id, i.start_date, i.egg_count, i.status,
@@ -43,8 +41,6 @@ func GetIncubations(c *gin.Context) {
 		WHERE i.user_id = ?
 		ORDER BY i.id DESC
 	`
-
-	// Perbaikan: Scan hasil query ke struct response
 	if err := config.DB.Raw(query, userID).Scan(&results).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

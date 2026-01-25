@@ -3,7 +3,6 @@ package main
 import (
 	"volar-farm-backend/config"
 	"volar-farm-backend/controllers"
-	// "volar-farm-backend/models" // Tidak dipakai di sini, sudah aman dihapus
 
 	"github.com/gin-gonic/gin"
 )
