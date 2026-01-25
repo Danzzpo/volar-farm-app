@@ -35,7 +35,8 @@ func GetMyAnimals(c *gin.Context) {
 	pageStr := c.DefaultQuery("page", "1")
 	limitStr := c.DefaultQuery("limit", "10")
 	search := c.Query("search")
-	status := c.Query("status") // <--- TANGKAP PARAMETER STATUS
+	status := c.Query("status")
+	gender := c.Query("gender") // <--- 1. TANGKAP GENDER
 
 	// Konversi string ke int
 	page, _ := strconv.Atoi(pageStr)
@@ -48,24 +49,34 @@ func GetMyAnimals(c *gin.Context) {
 	// Query Dasar
 	query := config.DB.Model(&models.Animal{}).Where("user_id = ?", userID)
 
-	// Filter Search (Pencarian Nama/Ring/Jenis)
+	// Filter Search
 	if search != "" {
 		query = query.Where("(ring_number LIKE ? OR species LIKE ? OR visual LIKE ?)", "%"+search+"%", "%"+search+"%", "%"+search+"%")
 	}
 
-	// Filter Status (JIKA ADA PILIHAN STATUS)
+	// Filter Status
 	if status != "" && status != "All" {
 		query = query.Where("status = ?", status)
 	}
 
-	// Hitung Total Data (setelah filter)
+	// Filter Gender (M/F)
+	if gender != "" { // <--- 2. LOGIKA FILTER GENDER
+		query = query.Where("gender = ?", gender)
+	}
+
+	// === BAGIAN PENTING YANG TIDAK BOLEH HILANG ===
+	
+	// 3. Hitung Total Data (Untuk Pagination)
 	query.Count(&total)
 
-	// Ambil Data
+	// 4. Ambil Data (Eksekusi Query)
+	// Wajib pakai Preload agar data Bapak/Ibu terbawa
 	if err := query.Limit(limit).Offset(offset).Preload("Sire").Preload("Dam").Order("created_at DESC").Find(&animals).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal mengambil data"})
 		return
 	}
+
+	// ==============================================
 
 	c.JSON(http.StatusOK, gin.H{
 		"data":  animals,

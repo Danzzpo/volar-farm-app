@@ -1,6 +1,8 @@
 /** @type {import('tailwindcss').Config} */
+import scrollbar from 'tailwind-scrollbar'; // <--- Import plugin
+
 export default {
-  darkMode: 'class', // <--- PASTIIN BARIS INI ADA! JANGAN SAMPAI HILANG
+  darkMode: 'class',
   content: [
     "./index.html",
     "./src/**/*.{vue,js,ts,jsx,tsx}",
@@ -8,5 +10,7 @@ export default {
   theme: {
     extend: {},
   },
-  plugins: [],
+  plugins: [
+    scrollbar, // <--- Masukkan ke sini
+  ],
 }

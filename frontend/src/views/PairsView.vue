@@ -1,15 +1,14 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-// Import Icon Modern
+import BirdSelect from '../components/BirdSelect.vue' 
 import { 
   HeartHandshake, Search, Plus, X, Save, 
-  Bird, Calendar, AlertCircle, Trash2, Power, History
+  Bird, Calendar, AlertCircle, Trash2, Power, History, Home // <--- TAMBAH IMPORT HOME
 } from 'lucide-vue-next'
 
 const router = useRouter()
 const pairs = ref([])
-const animals = ref([]) 
 const showModal = ref(false)
 const loading = ref(false)
 const searchQuery = ref('')
@@ -25,13 +24,6 @@ const form = ref({
   notes: ''
 })
 
-// --- COMPUTED DATA ---
-
-// 1. Filter Burung untuk Dropdown (Hanya yg Available & Sesuai Gender)
-const males = computed(() => animals.value.filter(a => a.gender === 'M' && (a.status === 'Available' || a.status === 'Keep')))
-const females = computed(() => animals.value.filter(a => a.gender === 'F' && (a.status === 'Available' || a.status === 'Keep')))
-
-// 2. Filter List Pasangan (Search)
 const filteredPairs = computed(() => {
   if (!searchQuery.value) return pairs.value
   const lower = searchQuery.value.toLowerCase()
@@ -42,20 +34,10 @@ const filteredPairs = computed(() => {
   )
 })
 
-// --- FETCH DATA ---
 onMounted(() => {
   if (!userId) { router.push('/login'); return }
-  fetchAnimals()
   fetchPairs()
 })
-
-const fetchAnimals = async () => {
-  try {
-    const res = await fetch(`http://localhost:8080/api/animals?user_id=${userId}`)
-    const json = await res.json()
-    animals.value = json.data || []
-  } catch (err) { console.error(err) }
-}
 
 const fetchPairs = async () => {
   loading.value = true
@@ -66,10 +48,7 @@ const fetchPairs = async () => {
   } catch (err) { console.error(err) } finally { loading.value = false }
 }
 
-// --- ACTIONS ---
-
 const openModal = () => {
-  // Reset form
   form.value = {
     male_id: "", female_id: "", cage: '',
     pair_date: new Date().toISOString().split('T')[0], notes: ''
@@ -82,7 +61,6 @@ const submitPair = async () => {
     alert("Jantan, Betina, dan Kandang wajib diisi!")
     return
   }
-  
   isSubmitting.value = true
   const payload = {
     user_id: parseInt(userId),
@@ -114,7 +92,6 @@ const submitPair = async () => {
 const updateStatus = async (pairId, newStatus) => {
   const msg = newStatus === 'REST' ? 'Istirahatkan pasangan ini?' : 'Cabut/Bubarkan pasangan ini?'
   if(!confirm(msg)) return
-  
   try {
     await fetch(`http://localhost:8080/api/pairs/${pairId}`, {
       method: 'PATCH',
@@ -160,21 +137,16 @@ const formatDate = (d) => new Date(d).toLocaleDateString('id-ID', {day: 'numeric
     <div v-else-if="filteredPairs.length === 0" class="text-center py-20 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-3xl bg-slate-50 dark:bg-slate-800/50">
        <HeartHandshake class="w-16 h-16 text-slate-300 mx-auto mb-4" />
        <h3 class="text-lg font-bold text-slate-600 dark:text-slate-300">Belum ada pasangan</h3>
-       <p class="text-slate-400 text-sm mb-4">Mulai menjodohkan burung untuk produksi.</p>
-       <button @click="openModal" class="text-pink-500 font-bold hover:underline">Buat Jodohan Sekarang</button>
+       <button @click="openModal" class="text-pink-500 font-bold hover:underline mt-2">Buat Jodohan Sekarang</button>
     </div>
 
     <div v-else class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-      
-      <div 
-        v-for="pair in filteredPairs" 
-        :key="pair.id" 
-        class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm hover:shadow-xl transition duration-300 border border-slate-100 dark:border-slate-700 group overflow-hidden flex flex-col"
-      >
+      <div v-for="pair in filteredPairs" :key="pair.id" class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm hover:shadow-xl transition duration-300 border border-slate-100 dark:border-slate-700 group overflow-hidden flex flex-col">
+        
         <div class="px-5 py-3 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/30">
           <div class="flex items-center gap-2">
             <div class="w-8 h-8 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 flex items-center justify-center shadow-sm">
-              <span class="text-lg">🏠</span>
+              <Home class="w-4 h-4 text-blue-500" /> 
             </div>
             <span class="font-bold text-slate-700 dark:text-slate-200 text-lg">{{ pair.cage }}</span>
           </div>
@@ -193,7 +165,6 @@ const formatDate = (d) => new Date(d).toLocaleDateString('id-ID', {day: 'numeric
           </div>
 
           <div class="flex justify-between items-start gap-4 z-10 relative">
-            
             <div class="flex-1 flex flex-col items-center text-center">
               <div class="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 border-2 border-white dark:border-slate-700 shadow-md flex items-center justify-center mb-2">
                 <Bird class="w-6 h-6" />
@@ -209,18 +180,13 @@ const formatDate = (d) => new Date(d).toLocaleDateString('id-ID', {day: 'numeric
               <h4 class="font-bold text-slate-800 dark:text-white text-sm leading-tight line-clamp-2" :title="pair.female?.visual">{{ pair.female?.visual || 'Unknown' }}</h4>
               <span class="text-[10px] text-slate-500 bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded mt-1 font-mono">{{ pair.female?.ring_number }}</span>
             </div>
-
           </div>
         </div>
 
         <div class="bg-slate-50 dark:bg-slate-900/50 p-3 border-t border-slate-100 dark:border-slate-700">
            <div class="flex justify-between items-center text-xs text-slate-400 mb-3">
-              <div class="flex items-center gap-1">
-                <Calendar class="w-3 h-3" /> {{ formatDate(pair.pair_date || pair.created_at) }}
-              </div>
-              <div v-if="pair.notes" class="flex items-center gap-1 cursor-help" :title="pair.notes">
-                <AlertCircle class="w-3 h-3" /> Info
-              </div>
+              <div class="flex items-center gap-1"><Calendar class="w-3 h-3" /> {{ formatDate(pair.pair_date || pair.created_at) }}</div>
+              <div v-if="pair.notes" class="flex items-center gap-1 cursor-help" :title="pair.notes"><AlertCircle class="w-3 h-3" /> Info</div>
            </div>
 
            <div v-if="pair.status !== 'History'" class="grid grid-cols-2 gap-2">
@@ -242,78 +208,55 @@ const formatDate = (d) => new Date(d).toLocaleDateString('id-ID', {day: 'numeric
              Pasangan Non-Aktif (History)
            </div>
         </div>
-
       </div>
     </div>
 
-    <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" @click.self="showModal = false">
-      <div class="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden animate-fade-in-up">
+    <div v-if="showModal" class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm" @click.self="showModal = false">
+      <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
         
-        <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-900">
-          <div>
-            <h3 class="font-bold text-lg text-slate-800 dark:text-white flex items-center gap-2">
-              <HeartHandshake class="w-5 h-5 text-pink-500"/> Jodohkan Pasangan Baru
-            </h3>
-          </div>
-          <button @click="showModal = false" class="p-1 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 transition"><X class="w-5 h-5" /></button>
-        </div>
-
-        <div class="p-6 space-y-5 max-h-[75vh] overflow-y-auto">
+        <div class="relative transform bg-white dark:bg-slate-900 rounded-2xl shadow-2xl text-left transition-all sm:my-8 sm:w-full sm:max-w-2xl border border-slate-100 dark:border-slate-800">
           
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div class="space-y-1">
-              <label class="text-xs font-bold text-blue-600 uppercase tracking-wider">Pejantan (Sire)</label>
-              <div class="relative">
-                <select v-model="form.male_id" class="w-full p-3 bg-blue-50/50 dark:bg-slate-800 border border-blue-100 dark:border-slate-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 dark:text-white appearance-none">
-                  <option value="" disabled>-- Pilih Jantan Available --</option>
-                  <option v-for="b in males" :key="b.id" :value="b.id">
-                    {{ b.ring_number }} - {{ b.visual }}
-                  </option>
-                </select>
-                <div class="absolute right-3 top-3 pointer-events-none text-blue-400">▼</div>
+          <div class="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-900 rounded-t-2xl">
+            <h3 class="font-bold text-xl text-slate-800 dark:text-white flex items-center gap-2">
+              <HeartHandshake class="w-6 h-6 text-pink-500"/> Jodohkan Pasangan Baru
+            </h3>
+            <button @click="showModal = false" class="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 transition"><X class="w-6 h-6" /></button>
+          </div>
+
+          <div class="p-6 space-y-6 bg-white dark:bg-slate-900">
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <BirdSelect label="Pejantan (Sire)" gender="Male" :userId="userId" v-model="form.male_id" />
+              <BirdSelect label="Betina (Dam)" gender="Female" :userId="userId" v-model="form.female_id" />
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label class="form-label">Nomor / Nama Kandang</label>
+                <input v-model="form.cage" type="text" placeholder="Contoh: Glodok A1" class="input-field">
+              </div>
+              <div>
+                <label class="form-label">Tanggal Masuk</label>
+                <input v-model="form.pair_date" type="date" class="input-field">
               </div>
             </div>
 
-            <div class="space-y-1">
-              <label class="text-xs font-bold text-pink-600 uppercase tracking-wider">Betina (Dam)</label>
-              <div class="relative">
-                <select v-model="form.female_id" class="w-full p-3 bg-pink-50/50 dark:bg-slate-800 border border-pink-100 dark:border-slate-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-pink-500 dark:text-white appearance-none">
-                  <option value="" disabled>-- Pilih Betina Available --</option>
-                  <option v-for="b in females" :key="b.id" :value="b.id">
-                    {{ b.ring_number }} - {{ b.visual }}
-                  </option>
-                </select>
-                <div class="absolute right-3 top-3 pointer-events-none text-pink-400">▼</div>
-              </div>
+            <div>
+              <label class="form-label">Catatan Tambahan</label>
+              <textarea v-model="form.notes" rows="3" placeholder="Kondisi burung, program ternak, dll..." class="input-field resize-none"></textarea>
             </div>
+
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div class="space-y-1">
-              <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Nomor / Nama Kandang</label>
-              <input v-model="form.cage" type="text" placeholder="Contoh: Glodok A1" class="w-full p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-slate-400 dark:text-white">
-            </div>
-            <div class="space-y-1">
-              <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Tanggal Masuk</label>
-              <input v-model="form.pair_date" type="date" class="w-full p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-slate-400 dark:text-white">
-            </div>
-          </div>
-
-          <div class="space-y-1">
-            <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Catatan Tambahan</label>
-            <textarea v-model="form.notes" rows="3" placeholder="Kondisi burung, program ternak, dll..." class="w-full p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-slate-400 dark:text-white resize-none"></textarea>
+          <div class="px-6 py-5 bg-slate-50 dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex gap-4 rounded-b-2xl">
+            <button @click="showModal = false" class="flex-1 py-3.5 rounded-xl border border-slate-300 font-bold text-base text-slate-600 hover:bg-slate-100 transition">Batal</button>
+            <button @click="submitPair" :disabled="isSubmitting" class="flex-1 py-3.5 rounded-xl bg-gradient-to-r from-pink-600 to-rose-600 text-white font-bold text-base hover:from-pink-700 hover:to-rose-700 transition shadow-lg shadow-pink-500/30 flex items-center justify-center gap-2">
+              <Save v-if="!isSubmitting" class="w-5 h-5" />
+              <span>{{ isSubmitting ? 'Menyimpan...' : 'Simpan Pasangan' }}</span>
+            </button>
           </div>
 
         </div>
-
-        <div class="px-6 py-4 bg-slate-50 dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex gap-3">
-          <button @click="showModal = false" class="flex-1 py-3 rounded-xl border border-slate-300 font-bold text-sm text-slate-500 hover:bg-slate-100 transition">Batal</button>
-          <button @click="submitPair" :disabled="isSubmitting" class="flex-1 py-3 rounded-xl bg-gradient-to-r from-pink-600 to-rose-600 text-white font-bold text-sm hover:from-pink-700 hover:to-rose-700 transition shadow-lg shadow-pink-500/30 flex items-center justify-center gap-2">
-            <Save v-if="!isSubmitting" class="w-5 h-5" />
-            <span>{{ isSubmitting ? 'Menyimpan...' : 'Simpan Pasangan' }}</span>
-          </button>
-        </div>
-
       </div>
     </div>
 
@@ -321,11 +264,8 @@ const formatDate = (d) => new Date(d).toLocaleDateString('id-ID', {day: 'numeric
 </template>
 
 <style scoped>
-@keyframes fadeInUp {
-  from { opacity: 0; transform: scale(0.95) translateY(10px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
-}
-.animate-fade-in-up {
-  animation: fadeInUp 0.3s ease-out forwards;
-}
+.form-label { @apply block text-sm font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wide mb-2; }
+.input-field { @apply w-full p-3.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl text-base outline-none focus:ring-2 focus:ring-pink-500 dark:text-white transition shadow-sm; }
+@keyframes fadeInUp { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+.animate-fade-in-up { animation: fadeInUp 0.3s ease-out forwards; }
 </style>
