@@ -1,8 +1,8 @@
 <script setup>
-import { ref, onMounted, computed, nextTick } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import { 
-  Circle, Calendar, Clock, Plus, Minus,
-  ArrowRight, Bird, X, Save, Egg, Search, ChevronDown, Check, Loader2 
+  Circle, Clock, Plus, Minus, // Calendar dihapus dari import
+  ArrowRight, Bird, X, Save, Egg, Search, ChevronDown, Check 
 } from 'lucide-vue-next'
 
 const incubations = ref([])
@@ -20,16 +20,9 @@ const dropdownRef = ref(null)
 
 const form = ref({
   pair_id: '',
-  start_date: new Date().toISOString().split('T')[0], // Default Hari Ini
+  start_date: '',
   egg_count: 1,
   notes: ''
-})
-
-// COMPUTED UNTUK TAMPILAN TANGGAL AGAR RAPI
-const displayDate = computed(() => {
-  if (!form.value.start_date) return 'Pilih Tanggal'
-  const date = new Date(form.value.start_date)
-  return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
 })
 
 const fetchIncubations = async () => {
@@ -73,12 +66,7 @@ const getProgress = (startDate) => {
 
 const openModal = () => {
   fetchActivePairs()
-  form.value = { 
-    pair_id: '', 
-    start_date: new Date().toISOString().split('T')[0], 
-    egg_count: 1, 
-    notes: '' 
-  }
+  form.value = { pair_id: '', start_date: new Date().toISOString().split('T')[0], egg_count: 1, notes: '' }
   selectedPairLabel.value = ''
   searchQuery.value = ''
   isModalOpen.value = true
@@ -200,9 +188,9 @@ onMounted(() => fetchIncubations())
       </div>
     </div>
 
-    <div v-if="isModalOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm overflow-y-auto no-scrollbar" @click.self="isModalOpen = false">
+    <div v-if="isModalOpen" class="fixed inset-0 z-50 h-screen w-screen overflow-hidden bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4" @click.self="isModalOpen = false">
       
-      <div class="bg-white dark:bg-slate-900 w-full max-w-lg rounded-2xl shadow-2xl animate-fade-in-up flex flex-col relative my-8">
+      <div class="bg-white dark:bg-slate-900 w-full max-w-lg rounded-2xl shadow-2xl animate-fade-in-up flex flex-col relative">
         
         <div class="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-900 shrink-0 rounded-t-2xl">
           <h3 class="font-bold text-xl text-slate-800 dark:text-white flex items-center gap-2"><Plus class="w-6 h-6 text-yellow-500"/> Input Pengeraman</h3>
@@ -225,7 +213,7 @@ onMounted(() => fetchIncubations())
                   <input v-model="searchQuery" ref="dropdownRef" type="text" placeholder="Cari Kandang..." class="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm focus:ring-2 focus:ring-yellow-500 outline-none dark:text-white">
                 </div>
               </div>
-              <ul class="max-h-60 overflow-y-auto custom-scrollbar p-1">
+              <ul class="max-h-48 overflow-y-auto custom-scrollbar p-1">
                 <li v-if="filteredPairs().length === 0" class="p-3 text-center text-sm text-slate-500">Tidak ditemukan.</li>
                 <li v-for="pair in filteredPairs()" :key="pair.id" @click="selectPair(pair)" class="flex justify-between items-center px-4 py-3 hover:bg-yellow-50 dark:hover:bg-slate-700 rounded-lg cursor-pointer group">
                   <div class="font-bold text-slate-700 dark:text-white">{{ pair.cage }} <span class="font-normal text-slate-500 ml-1 text-xs">({{ pair.visual }})</span></div>
@@ -236,27 +224,18 @@ onMounted(() => fetchIncubations())
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <div class="relative">
+            <div>
               <label class="form-label">Tgl Mulai</label>
-              
-              <div class="relative w-full h-[54px]">
-                
-                <div class="absolute inset-0 w-full h-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl flex items-center px-4 pointer-events-none">
-                   <Calendar class="w-5 h-5 text-yellow-500 mr-3 shrink-0" />
-                   <span class="font-bold text-slate-700 dark:text-white truncate text-base">{{ displayDate }}</span>
-                </div>
-
-                <input 
-                  v-model="form.start_date" 
-                  type="date" 
-                  class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                >
-              </div>
+              <input 
+                v-model="form.start_date" 
+                type="date" 
+                class="input-field cursor-pointer"
+              >
             </div>
             
             <div>
               <label class="form-label">Jumlah Telur</label>
-              <div class="flex items-center h-[54px]">
+              <div class="flex items-center h-[52px]">
                  <button 
                    @click="decrementEgg"
                    type="button" 
@@ -316,29 +295,10 @@ onMounted(() => fetchIncubations())
 @keyframes fadeInUp { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
 .animate-fade-in-up { animation: fadeInUp 0.3s ease-out forwards; }
 
-/* FIX: SCROLL OVERLAY (Hide scrollbar but allow scrolling) */
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-.no-scrollbar {
-  -ms-overflow-style: none; /* IE and Edge */
-  scrollbar-width: none; /* Firefox */
-}
-
-/* CUSTOM SCROLLBAR (Textarea) */
-.custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
-}
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: #cbd5e1;
-  border-radius: 10px;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: #94a3b8;
-}
+.custom-scrollbar::-webkit-scrollbar { width: 6px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: #94a3b8; }
 
 input[type=number]::-webkit-inner-spin-button, 
 input[type=number]::-webkit-outer-spin-button { 
